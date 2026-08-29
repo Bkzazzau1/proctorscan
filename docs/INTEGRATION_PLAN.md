@@ -9,6 +9,9 @@
 
 Exit criterion: repeatable `ONLINE` status and stable heartbeats through reconnects.
 
+Status: complete. Verified on physical hardware with firmware `0.1.0` over the
+native USB Serial/JTAG interface. No peripheral modules were connected.
+
 ## Stage 2 — hardware verification (documentation only)
 
 - Gather authoritative documents for each exact board revision.
@@ -35,4 +38,3 @@ Exit criterion: signed-off wiring sheet for one peripheral at a time.
 - Establish baselines and false-positive tests.
 - Combine independent signals into explainable confidence indicators.
 - Treat output as an aid for review, not an automatic accusation.
-

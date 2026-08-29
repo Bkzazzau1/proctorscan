@@ -25,6 +25,17 @@ smallest safe application surface for initial bring-up.
 
 ## Stage 1 setup
 
+### Verified bring-up
+
+Stage 1 was verified on a physical Waveshare ESP32-P4-WIFI6-DEV-KIT using
+ESP-IDF v6.1 and the board's native USB Serial/JTAG interface. The firmware
+build, flash verification, device identity message, and repeating two-second
+heartbeats all completed successfully.
+
+The serial port name is assigned by Windows and may differ between computers.
+Always identify the Espressif USB Serial/JTAG port with the command below; do
+not copy a COM port number from another machine.
+
 ### Try the status screen without hardware
 
 The simulator uses the same parser and status model as a real board and requires no
@@ -39,7 +50,7 @@ ESP-IDF or connecting the development board.
 
 ### 1. Install development tools
 
-- Install a current ESP-IDF release that supports ESP32-P4.
+- Install ESP-IDF v6.1 (the version used for the verified bring-up).
 - Install Python 3.10 or newer.
 - Create a Python virtual environment, then install the local monitor dependency:
 
