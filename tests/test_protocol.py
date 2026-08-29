@@ -1,5 +1,8 @@
 import unittest
+from contextlib import redirect_stdout
+from io import StringIO
 
+from app.monitor import simulate
 from app.protocol import DeviceStatus, ProtocolError, parse_line
 
 
@@ -32,7 +35,15 @@ class ProtocolTests(unittest.TestCase):
         with self.assertRaises(ProtocolError):
             parse_line("I (123) boot: normal ESP-IDF output")
 
+    def test_simulator_exercises_status_path(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            result = simulate(count=2, interval=0)
+        self.assertEqual(result, 0)
+        self.assertIn("proctorscan-simulator", output.getvalue())
+        self.assertIn("Heartbeat: 2", output.getvalue())
+        self.assertIn("Status: ONLINE", output.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()
-
