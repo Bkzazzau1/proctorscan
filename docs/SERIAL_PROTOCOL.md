@@ -1,7 +1,8 @@
 # Diagnostics serial protocol
 
 The stage-one protocol is newline-delimited JSON (NDJSON), UTF-8, at 115200 baud.
-Each message is one JSON object followed by `\n`. Version 1 has two message types.
+Each message is one JSON object followed by `\n`. Version 1 supports the controller
+messages below plus an explicitly simulated accelerometer message.
 
 Identity is emitted at startup and periodically so a monitor connected after boot
 can still learn the device identity:
@@ -20,3 +21,15 @@ The device ID is derived locally from the ESP32 base MAC address. It is an ident
 not an authentication secret. Consumers must ignore malformed lines and unknown
 protocol versions. Stage one accepts no commands and performs no actuation.
 
+An ADXL345 simulation can exercise the future display path without GPIO access:
+
+```json
+{"protocol":1,"type":"accelerometer","source":"simulation","x_g":0.01,"y_g":-0.005,"z_g":1.0}
+```
+
+The version-one monitor rejects accelerometer messages unless `source` is exactly
+`simulation`. Real sensor data remains disabled until the physical connection gate
+and firmware driver review are complete.
+
+The firmware contains the build option `PROCTORSCAN_ADXL345_SIMULATOR`, which
+defaults to off. Even when enabled it performs no I2C or GPIO access.

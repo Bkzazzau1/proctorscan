@@ -1,0 +1,10 @@
+menu "ProctorScan diagnostics"
+
+config PROCTORSCAN_ADXL345_SIMULATOR
+    bool "Emit simulated ADXL345 samples"
+    default n
+    help
+        Emit clearly marked synthetic acceleration messages. This option does
+        not configure I2C, GPIO, or access physical sensor hardware.
+
+endmenu

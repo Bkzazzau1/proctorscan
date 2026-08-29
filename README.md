@@ -45,6 +45,12 @@ extra Python packages:
 py -m app.monitor --simulate
 ```
 
+Include clearly labeled simulated ADXL345 readings (no GPIO or sensor required):
+
+```powershell
+py -m app.monitor --simulate --simulate-adxl
+```
+
 Show the current controller and peripheral safety/readiness states:
 
 ```powershell

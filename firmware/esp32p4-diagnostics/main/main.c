@@ -40,6 +40,22 @@ static void emit_heartbeat(uint32_t sequence)
     fflush(stdout);
 }
 
+#if CONFIG_PROCTORSCAN_ADXL345_SIMULATOR
+static void emit_simulated_acceleration(uint32_t sequence)
+{
+    const double x_g = 0.01 * (double)sequence;
+    const double y_g = -0.005 * (double)sequence;
+    printf(
+        "{\"protocol\":%d,\"type\":\"accelerometer\","
+        "\"source\":\"simulation\",\"x_g\":%.3f,\"y_g\":%.3f,\"z_g\":1.000}\n",
+        PROTOCOL_VERSION,
+        x_g,
+        y_g
+    );
+    fflush(stdout);
+}
+#endif
+
 void app_main(void)
 {
     uint8_t mac[6] = {0};
@@ -52,9 +68,11 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(HEARTBEAT_PERIOD_MS));
         sequence++;
         emit_heartbeat(sequence);
+#if CONFIG_PROCTORSCAN_ADXL345_SIMULATOR
+        emit_simulated_acceleration(sequence);
+#endif
         if ((sequence % IDENTITY_PERIOD_HEARTBEATS) == 0) {
             emit_identity(mac);
         }
     }
 }
-

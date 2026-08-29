@@ -31,7 +31,7 @@ def parse_line(line: bytes | str) -> dict[str, Any]:
         raise ProtocolError("message must be a JSON object")
     if message.get("protocol") != PROTOCOL_VERSION:
         raise ProtocolError("unsupported protocol version")
-    if message.get("type") not in {"identity", "heartbeat"}:
+    if message.get("type") not in {"identity", "heartbeat", "accelerometer"}:
         raise ProtocolError("unsupported message type")
     return message
 
@@ -44,6 +44,8 @@ class DeviceStatus:
     heartbeat_sequence: int | None = None
     uptime_ms: int | None = None
     last_seen_monotonic: float | None = None
+    accelerometer_source: str | None = None
+    acceleration_g: tuple[float, float, float] | None = None
 
     def update(self, message: dict[str, Any], now: float | None = None) -> None:
         now = time.monotonic() if now is None else now
@@ -54,13 +56,21 @@ class DeviceStatus:
             self.device_id = message["device_id"]
             self.board = message["board"]
             self.firmware = message["firmware"]
-        else:
+        elif message["type"] == "heartbeat":
             if not isinstance(message.get("sequence"), int):
                 raise ProtocolError("heartbeat sequence must be an integer")
             if not isinstance(message.get("uptime_ms"), int):
                 raise ProtocolError("heartbeat uptime_ms must be an integer")
             self.heartbeat_sequence = message["sequence"]
             self.uptime_ms = message["uptime_ms"]
+        else:
+            if message.get("source") != "simulation":
+                raise ProtocolError("accelerometer source must be simulation")
+            axes = tuple(message.get(axis) for axis in ("x_g", "y_g", "z_g"))
+            if not all(isinstance(value, (int, float)) and not isinstance(value, bool) for value in axes):
+                raise ProtocolError("accelerometer axes must be numbers")
+            self.accelerometer_source = "simulation"
+            self.acceleration_g = axes
         self.last_seen_monotonic = now
 
     def connection(self, now: float | None = None, stale_after: float = 5.0) -> str:
@@ -68,4 +78,3 @@ class DeviceStatus:
             return "WAITING"
         now = time.monotonic() if now is None else now
         return "ONLINE" if now - self.last_seen_monotonic <= stale_after else "STALE"
-

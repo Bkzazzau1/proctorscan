@@ -45,6 +45,22 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn("Heartbeat: 2", output.getvalue())
         self.assertIn("Status: ONLINE", output.getvalue())
 
+    def test_adxl_simulator_uses_explicit_simulation_source(self):
+        output = StringIO()
+        with redirect_stdout(output):
+            result = simulate(count=1, interval=0, simulate_adxl=True)
+        self.assertEqual(result, 0)
+        self.assertIn("ADXL345: SIMULATED", output.getvalue())
+
+    def test_rejects_non_simulated_accelerometer_data(self):
+        with self.assertRaises(ProtocolError):
+            DeviceStatus().update(
+                parse_line(
+                    '{"protocol":1,"type":"accelerometer","source":"hardware",'
+                    '"x_g":0,"y_g":0,"z_g":1}'
+                )
+            )
+
     def test_hardware_readiness_keeps_peripherals_disconnected(self):
         peripherals = HARDWARE_ITEMS[1:]
         self.assertTrue(peripherals)

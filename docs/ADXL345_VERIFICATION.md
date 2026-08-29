@@ -23,7 +23,11 @@ can differ in regulators, level shifting, pull-ups, pin order, and labeling.
 
 ## Current decision
 
-Status: **DISCONNECTED / UNVERIFIED**
+Status: **DISCONNECTED / UNPOWERED CHECK PASSED**
+
+Photographs confirmed the eight labels and a component-free rear side. An unpowered
+continuity test displayed `OL` between `VCC` and `GND`, so no direct short was
+detected. The supplied header is not soldered; loose jumper contact is not approved.
 
 No ESP32-P4 GPIO assignment, bus address, supply voltage, or wiring instruction is
 approved yet.
