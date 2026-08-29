@@ -45,6 +45,12 @@ extra Python packages:
 py -m app.monitor --simulate
 ```
 
+Show the current controller and peripheral safety/readiness states:
+
+```powershell
+py -m app.monitor --hardware-status
+```
+
 This is the quickest way to confirm the local diagnostics feature before installing
 ESP-IDF or connecting the development board.
 
@@ -120,3 +126,5 @@ the correct USB cable. Leave these disconnected:
 - OV5647 / Raspberry Pi Camera Rev 1.3
 
 See [docs/HARDWARE_SAFETY.md](docs/HARDWARE_SAFETY.md) before expanding the build.
+The first peripheral verification worksheet is
+[docs/ADXL345_VERIFICATION.md](docs/ADXL345_VERIFICATION.md).

@@ -9,6 +9,7 @@ import sys
 import time
 
 from .protocol import DeviceStatus, ProtocolError, parse_line
+from .hardware import hardware_status_text
 
 
 LOG = logging.getLogger("proctorscan.hardware")
@@ -107,6 +108,7 @@ def simulate(count: int, interval: float) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--list", action="store_true", help="list serial ports")
+    parser.add_argument("--hardware-status", action="store_true", help="show peripheral readiness gates")
     parser.add_argument("--port", help="serial port, for example COM7")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--simulate", action="store_true", help="run without hardware")
@@ -125,6 +127,9 @@ def main() -> int:
     )
     if args.list:
         return print_ports()
+    if args.hardware_status:
+        print(hardware_status_text())
+        return 0
     if args.simulate:
         if args.count < 0 or args.interval < 0:
             parser.error("--count and --interval must not be negative")

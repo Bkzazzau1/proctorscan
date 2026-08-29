@@ -3,6 +3,7 @@ from contextlib import redirect_stdout
 from io import StringIO
 
 from app.monitor import simulate
+from app.hardware import HARDWARE_ITEMS, hardware_status_text
 from app.protocol import DeviceStatus, ProtocolError, parse_line
 
 
@@ -43,6 +44,12 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn("proctorscan-simulator", output.getvalue())
         self.assertIn("Heartbeat: 2", output.getvalue())
         self.assertIn("Status: ONLINE", output.getvalue())
+
+    def test_hardware_readiness_keeps_peripherals_disconnected(self):
+        peripherals = HARDWARE_ITEMS[1:]
+        self.assertTrue(peripherals)
+        self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals))
+        self.assertIn("No peripheral pin mapping is approved", hardware_status_text())
 
 
 if __name__ == "__main__":
