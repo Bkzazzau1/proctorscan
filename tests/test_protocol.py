@@ -83,7 +83,7 @@ class ProtocolTests(unittest.TestCase):
     def test_hardware_readiness_keeps_unverified_peripherals_safe(self):
         peripherals = HARDWARE_ITEMS[1:]
         self.assertTrue(peripherals)
-        self.assertEqual(peripherals[0].state, "TEMPORARY WIRING / NOT POWERED")
+        self.assertEqual(peripherals[0].state, "POWERED PROBE / NOT DETECTED")
         self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals[1:]))
         self.assertIn("No unverified peripheral is approved for powered use", hardware_status_text())
 

@@ -37,3 +37,10 @@ No powered physical test is approved yet. The temporary wiring uses the document
 A disabled-by-default identification probe is implemented for the documented
 Waveshare I2C bus (`SDA/GPIO7`, `SCL/GPIO8`) and ADXL345 address `0x53`. It reads
 only the device ID register and requires `0xE5` before reporting `DETECTED`.
+
+## First powered probe result
+
+The ESP32-P4 remained online with stable heartbeats on firmware `0.2.0`, but the
+ADXL345 repeatedly reported `NOT_DETECTED` at address `0x53`. Measurement mode was
+not enabled. The most likely cause is an open or incorrect temporary connection;
+the unsoldered header previously failed continuity testing.
