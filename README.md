@@ -115,6 +115,10 @@ Heartbeat: 4  uptime=12s
 The monitor changes the status to `STALE` if no valid heartbeat arrives for more
 than five seconds. Press Ctrl+C to stop it.
 
+The disabled-by-default ADXL345 hardware probe verifies address `0x53` and device
+ID `0xE5` without starting measurements. It must only be enabled after the complete
+temporary wiring has been inspected while unpowered.
+
 ## Verify without hardware
 
 ```powershell

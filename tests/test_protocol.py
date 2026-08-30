@@ -61,11 +61,31 @@ class ProtocolTests(unittest.TestCase):
                 )
             )
 
-    def test_hardware_readiness_keeps_peripherals_disconnected(self):
+    def test_adxl_hardware_probe_status(self):
+        status = DeviceStatus()
+        status.update(
+            parse_line(
+                '{"protocol":1,"type":"peripheral_status","component":"adxl345",'
+                '"source":"hardware","state":"DETECTED","address":83,"device_id":229}'
+            )
+        )
+        self.assertEqual(status.accelerometer_hardware_state, "DETECTED")
+
+    def test_rejects_unknown_hardware_probe_state(self):
+        with self.assertRaises(ProtocolError):
+            DeviceStatus().update(
+                parse_line(
+                    '{"protocol":1,"type":"peripheral_status","component":"adxl345",'
+                    '"source":"hardware","state":"READY"}'
+                )
+            )
+
+    def test_hardware_readiness_keeps_unverified_peripherals_safe(self):
         peripherals = HARDWARE_ITEMS[1:]
         self.assertTrue(peripherals)
-        self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals))
-        self.assertIn("No peripheral pin mapping is approved", hardware_status_text())
+        self.assertEqual(peripherals[0].state, "TEMPORARY WIRING / NOT POWERED")
+        self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals[1:]))
+        self.assertIn("No unverified peripheral is approved for powered use", hardware_status_text())
 
 
 if __name__ == "__main__":

@@ -29,5 +29,11 @@ Photographs confirmed the eight labels and a component-free rear side. An unpowe
 continuity test displayed `OL` between `VCC` and `GND`, so no direct short was
 detected. The supplied header is not soldered; loose jumper contact is not approved.
 
-No ESP32-P4 GPIO assignment, bus address, supply voltage, or wiring instruction is
-approved yet.
+No powered physical test is approved yet. The temporary wiring uses the documented
+3.3 V I2C arrangement, but its unsoldered contacts still require visual inspection.
+
+## Software probe prepared
+
+A disabled-by-default identification probe is implemented for the documented
+Waveshare I2C bus (`SDA/GPIO7`, `SCL/GPIO8`) and ADXL345 address `0x53`. It reads
+only the device ID register and requires `0xE5` before reporting `DETECTED`.

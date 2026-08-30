@@ -31,7 +31,7 @@ def parse_line(line: bytes | str) -> dict[str, Any]:
         raise ProtocolError("message must be a JSON object")
     if message.get("protocol") != PROTOCOL_VERSION:
         raise ProtocolError("unsupported protocol version")
-    if message.get("type") not in {"identity", "heartbeat", "accelerometer"}:
+    if message.get("type") not in {"identity", "heartbeat", "accelerometer", "peripheral_status"}:
         raise ProtocolError("unsupported message type")
     return message
 
@@ -46,6 +46,7 @@ class DeviceStatus:
     last_seen_monotonic: float | None = None
     accelerometer_source: str | None = None
     acceleration_g: tuple[float, float, float] | None = None
+    accelerometer_hardware_state: str | None = None
 
     def update(self, message: dict[str, Any], now: float | None = None) -> None:
         now = time.monotonic() if now is None else now
@@ -63,7 +64,7 @@ class DeviceStatus:
                 raise ProtocolError("heartbeat uptime_ms must be an integer")
             self.heartbeat_sequence = message["sequence"]
             self.uptime_ms = message["uptime_ms"]
-        else:
+        elif message["type"] == "accelerometer":
             if message.get("source") != "simulation":
                 raise ProtocolError("accelerometer source must be simulation")
             axes = tuple(message.get(axis) for axis in ("x_g", "y_g", "z_g"))
@@ -71,6 +72,13 @@ class DeviceStatus:
                 raise ProtocolError("accelerometer axes must be numbers")
             self.accelerometer_source = "simulation"
             self.acceleration_g = axes
+        else:
+            if message.get("component") != "adxl345" or message.get("source") != "hardware":
+                raise ProtocolError("unsupported peripheral status")
+            allowed_states = {"DETECTED", "NOT_DETECTED", "ID_MISMATCH", "BUS_ERROR"}
+            if message.get("state") not in allowed_states:
+                raise ProtocolError("invalid ADXL345 hardware state")
+            self.accelerometer_hardware_state = message["state"]
         self.last_seen_monotonic = now
 
     def connection(self, now: float | None = None, stale_after: float = 5.0) -> str:

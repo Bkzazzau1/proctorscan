@@ -44,6 +44,8 @@ def print_status(status: DeviceStatus) -> None:
     if status.acceleration_g is not None:
         x_g, y_g, z_g = status.acceleration_g
         print(f"ADXL345: SIMULATED  x={x_g:+.3f}g y={y_g:+.3f}g z={z_g:+.3f}g")
+    if status.accelerometer_hardware_state is not None:
+        print(f"ADXL345 hardware probe: {status.accelerometer_hardware_state}")
     print("-")
 
 
@@ -88,7 +90,7 @@ def simulate(count: int, interval: float, simulate_adxl: bool = False) -> int:
         "type": "identity",
         "device_id": "proctorscan-simulator",
         "board": "waveshare-esp32-p4-wifi6-dev-kit",
-        "firmware": "0.1.0-simulated",
+        "firmware": "0.2.0-simulated",
     }
     status.update(parse_line(json.dumps(identity)))
     print("ProctorScan hardware monitor (simulation)")

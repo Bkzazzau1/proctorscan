@@ -33,3 +33,14 @@ and firmware driver review are complete.
 
 The firmware contains the build option `PROCTORSCAN_ADXL345_SIMULATOR`, which
 defaults to off. Even when enabled it performs no I2C or GPIO access.
+
+The separately gated physical probe reports whether register `0x00` contains the
+ADXL345 device ID `0xE5`:
+
+```json
+{"protocol":1,"type":"peripheral_status","component":"adxl345","source":"hardware","state":"DETECTED","address":83,"device_id":229}
+```
+
+Possible states are `DETECTED`, `NOT_DETECTED`, `ID_MISMATCH`, and `BUS_ERROR`.
+`PROCTORSCAN_ADXL345_PROBE` defaults to off and performs identification only; it
+does not place the accelerometer into measurement mode.
