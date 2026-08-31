@@ -5,7 +5,7 @@ ProctorScan is starting with one deliberately narrow hardware milestone:
 > ESP32-P4 → USB serial → local diagnostics monitor → device online
 
 No external sensors or camera are connected by this first stage. The AD8318-style
-RF detector, ADXL345, HLK-LD2420 V2.1, and OV5647 camera remain electrically
+RF detector, MPU6050, HLK-LD2420 V2.1, and MIPI camera remain electrically
 disconnected until the exact board revisions, pinouts, signal levels, connector
 orientation, and supply requirements are verified from authoritative documentation.
 
@@ -43,12 +43,6 @@ extra Python packages:
 
 ```powershell
 py -m app.monitor --simulate
-```
-
-Include clearly labeled simulated ADXL345 readings (no GPIO or sensor required):
-
-```powershell
-py -m app.monitor --simulate --simulate-adxl
 ```
 
 Show the current controller and peripheral safety/readiness states:
@@ -107,17 +101,13 @@ Expected output resembles:
 ProctorScan hardware monitor
 Device: proctorscan-0123456789ab
 Board: waveshare-esp32-p4-wifi6-dev-kit
-Firmware: 0.1.0
+Firmware: 0.3.0
 Status: ONLINE
 Heartbeat: 4  uptime=12s
 ```
 
 The monitor changes the status to `STALE` if no valid heartbeat arrives for more
 than five seconds. Press Ctrl+C to stop it.
-
-The disabled-by-default ADXL345 hardware probe verifies address `0x53` and device
-ID `0xE5` without starting measurements. It must only be enabled after the complete
-temporary wiring has been inspected while unpowered.
 
 ## Verify without hardware
 
@@ -131,10 +121,12 @@ For this stage, connect only the ESP32-P4 development board to the computer with
 the correct USB cable. Leave these disconnected:
 
 - AD8318-style RF detector module
-- ADXL345 breakout
+- MPU6050 motion/tamper sensor
 - HLK-LD2420 V2.1 radar
 - OV5647 / Raspberry Pi Camera Rev 1.3
 
 See [docs/HARDWARE_SAFETY.md](docs/HARDWARE_SAFETY.md) before expanding the build.
-The first peripheral verification worksheet is
-[docs/ADXL345_VERIFICATION.md](docs/ADXL345_VERIFICATION.md).
+
+The ADXL345 is explicitly excluded from the prototype. The MPU6050 is its selected
+replacement, but no MPU6050 pin mapping or firmware driver is approved until its
+exact breakout, pinout, and electrical requirements are verified.

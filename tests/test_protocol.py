@@ -45,46 +45,17 @@ class ProtocolTests(unittest.TestCase):
         self.assertIn("Heartbeat: 2", output.getvalue())
         self.assertIn("Status: ONLINE", output.getvalue())
 
-    def test_adxl_simulator_uses_explicit_simulation_source(self):
-        output = StringIO()
-        with redirect_stdout(output):
-            result = simulate(count=1, interval=0, simulate_adxl=True)
-        self.assertEqual(result, 0)
-        self.assertIn("ADXL345: SIMULATED", output.getvalue())
-
-    def test_rejects_non_simulated_accelerometer_data(self):
+    def test_rejects_removed_accelerometer_messages(self):
         with self.assertRaises(ProtocolError):
-            DeviceStatus().update(
-                parse_line(
-                    '{"protocol":1,"type":"accelerometer","source":"hardware",'
-                    '"x_g":0,"y_g":0,"z_g":1}'
-                )
-            )
-
-    def test_adxl_hardware_probe_status(self):
-        status = DeviceStatus()
-        status.update(
             parse_line(
-                '{"protocol":1,"type":"peripheral_status","component":"adxl345",'
-                '"source":"hardware","state":"DETECTED","address":83,"device_id":229}'
-            )
-        )
-        self.assertEqual(status.accelerometer_hardware_state, "DETECTED")
-
-    def test_rejects_unknown_hardware_probe_state(self):
-        with self.assertRaises(ProtocolError):
-            DeviceStatus().update(
-                parse_line(
-                    '{"protocol":1,"type":"peripheral_status","component":"adxl345",'
-                    '"source":"hardware","state":"READY"}'
-                )
+                '{"protocol":1,"type":"accelerometer","source":"hardware",'
+                '"x_g":0,"y_g":0,"z_g":1}'
             )
 
     def test_hardware_readiness_keeps_unverified_peripherals_safe(self):
         peripherals = HARDWARE_ITEMS[1:]
         self.assertTrue(peripherals)
-        self.assertEqual(peripherals[0].state, "POWERED PROBE / NOT DETECTED")
-        self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals[1:]))
+        self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals))
         self.assertIn("No unverified peripheral is approved for powered use", hardware_status_text())
 
 

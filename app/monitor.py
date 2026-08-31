@@ -41,11 +41,6 @@ def print_status(status: DeviceStatus) -> None:
             f"Heartbeat: {status.heartbeat_sequence}  "
             f"uptime={status.uptime_ms // 1000}s"
         )
-    if status.acceleration_g is not None:
-        x_g, y_g, z_g = status.acceleration_g
-        print(f"ADXL345: SIMULATED  x={x_g:+.3f}g y={y_g:+.3f}g z={z_g:+.3f}g")
-    if status.accelerometer_hardware_state is not None:
-        print(f"ADXL345 hardware probe: {status.accelerometer_hardware_state}")
     print("-")
 
 
@@ -82,7 +77,7 @@ def monitor(port: str, baud: int) -> int:
         return 0
 
 
-def simulate(count: int, interval: float, simulate_adxl: bool = False) -> int:
+def simulate(count: int, interval: float) -> int:
     """Exercise the real parser/status path without attached hardware."""
     status = DeviceStatus()
     identity = {
@@ -90,7 +85,7 @@ def simulate(count: int, interval: float, simulate_adxl: bool = False) -> int:
         "type": "identity",
         "device_id": "proctorscan-simulator",
         "board": "waveshare-esp32-p4-wifi6-dev-kit",
-        "firmware": "0.2.0-simulated",
+        "firmware": "0.3.0-simulated",
     }
     status.update(parse_line(json.dumps(identity)))
     print("ProctorScan hardware monitor (simulation)")
@@ -106,16 +101,6 @@ def simulate(count: int, interval: float, simulate_adxl: bool = False) -> int:
             "uptime_ms": sequence * 2000,
         }
         status.update(parse_line(json.dumps(heartbeat)))
-        if simulate_adxl:
-            sample = {
-                "protocol": 1,
-                "type": "accelerometer",
-                "source": "simulation",
-                "x_g": round(0.01 * sequence, 3),
-                "y_g": round(-0.005 * sequence, 3),
-                "z_g": 1.0,
-            }
-            status.update(parse_line(json.dumps(sample)))
         print_status(status)
     return 0
 
@@ -127,7 +112,6 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--port", help="serial port, for example COM7")
     parser.add_argument("--baud", type=int, default=115200)
     parser.add_argument("--simulate", action="store_true", help="run without hardware")
-    parser.add_argument("--simulate-adxl", action="store_true", help="add simulated ADXL345 readings")
     parser.add_argument("--count", type=int, default=3, help="simulated heartbeat count")
     parser.add_argument("--interval", type=float, default=0.5, help="simulation delay in seconds")
     parser.add_argument("--verbose", action="store_true")
@@ -149,9 +133,7 @@ def main() -> int:
     if args.simulate:
         if args.count < 0 or args.interval < 0:
             parser.error("--count and --interval must not be negative")
-        return simulate(args.count, args.interval, args.simulate_adxl)
-    if args.simulate_adxl:
-        parser.error("--simulate-adxl requires --simulate")
+        return simulate(args.count, args.interval)
     if not args.port:
         print("Specify --port COM_PORT or use --list.", file=sys.stderr)
         return 2

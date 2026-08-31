@@ -24,9 +24,10 @@ For each physical board, record and review:
 | Component | Interface expected later | Stage-one status | Verification still required |
 |---|---|---|---|
 | AD8318-style RF detector | Analog | Disconnected | Exact module IC/revision, supply, output range, ADC protection |
-| ADXL345 breakout | I2C or SPI | Disconnected | Exact breakout schematic, regulator/level shifting, pin order |
+| MPU6050 motion/tamper sensor | I2C (expected) | Disconnected | Exact breakout model, schematic, supply/logic levels, pin order |
 | HLK-LD2420 V2.1 | Likely UART/GPIO | Disconnected | Manufacturer pinout, supply and logic levels, connector orientation |
 | OV5647 / Pi Camera Rev 1.3 | MIPI-CSI | Disconnected | Waveshare cable/adapter compatibility and contact orientation |
 
 No pin mapping is defined in firmware until these gates are complete.
 
+The ADXL345 is not part of the ProctorScan Halo prototype and must not be connected.
