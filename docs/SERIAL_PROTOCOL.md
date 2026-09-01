@@ -24,11 +24,20 @@ protocol versions. Stage one accepts no commands and performs no actuation.
 The built-in microSD slot can report an identification-only result:
 
 ```json
-{"protocol":1,"type":"storage_status","component":"microsd","mode":"identification_only","state":"DETECTED","capacity_bytes":32000000000}
+{"protocol":1,"type":"storage_status","component":"microsd","mode":"new_file_only","state":"DETECTED","capacity_bytes":32000000000}
 ```
 
-Valid states are `DETECTED`, `NOT_DETECTED`, and `INIT_ERROR`. The firmware reads
-card metadata only; it does not mount, format, or modify the card filesystem.
+Valid states are `DETECTED`, `MOUNT_ERROR`, and `INIT_ERROR`. Formatting remains
+disabled.
+
+Firmware `0.5.0` reports the controlled local-log test separately:
+
+```json
+{"protocol":1,"type":"log_status","component":"microsd","state":"VERIFIED","path":"/sdcard/proctorscan/bringup-e3ac0e-000.log"}
+```
+
+The logging stage mounts without formatting and only creates a new file using
+exclusive creation. Existing files are never overwritten or deleted.
 
 The ADXL345-specific simulation and hardware-probe messages have been removed
 because the ADXL345 is not part of the prototype. MPU6050 support will be added as

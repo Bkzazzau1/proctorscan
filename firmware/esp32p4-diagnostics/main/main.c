@@ -1,16 +1,22 @@
+#include <errno.h>
+#include <fcntl.h>
 #include <inttypes.h>
 #include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 #include "esp_efuse.h"
 #include "esp_mac.h"
 #include "esp_timer.h"
+#include "esp_vfs_fat.h"
 #include "driver/sdmmc_host.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "sdmmc_cmd.h"
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 #define PROTOCOL_VERSION 1
-#define FIRMWARE_VERSION "0.4.1"
+#define FIRMWARE_VERSION "0.5.0"
 #define BOARD_NAME "waveshare-esp32-p4-wifi6-dev-kit"
 #define HEARTBEAT_PERIOD_MS 2000
 #define IDENTITY_PERIOD_HEARTBEATS 15
@@ -24,6 +30,9 @@
 
 static const char *storage_state = "INIT_ERROR";
 static uint64_t storage_capacity_bytes = 0;
+static const char *log_state = "NOT_STARTED";
+static char log_path[80] = "";
+static FILE *log_file = NULL;
 
 static void emit_identity(const uint8_t mac[6])
 {
@@ -56,7 +65,7 @@ static void emit_storage_status(void)
 {
     printf(
         "{\"protocol\":%d,\"type\":\"storage_status\","
-        "\"component\":\"microsd\",\"mode\":\"identification_only\","
+        "\"component\":\"microsd\",\"mode\":\"new_file_only\","
         "\"state\":\"%s\",\"capacity_bytes\":%" PRIu64 "}\n",
         PROTOCOL_VERSION,
         storage_state,
@@ -65,7 +74,93 @@ static void emit_storage_status(void)
     fflush(stdout);
 }
 
-static void identify_microsd(void)
+static void emit_log_status(void)
+{
+    printf(
+        "{\"protocol\":%d,\"type\":\"log_status\","
+        "\"component\":\"microsd\",\"state\":\"%s\",\"path\":\"%s\"}\n",
+        PROTOCOL_VERSION,
+        log_state,
+        log_path
+    );
+    fflush(stdout);
+}
+
+static bool create_unique_log(const uint8_t mac[6])
+{
+    if (mkdir("/sdcard/proctorscan", 0755) != 0 && errno != EEXIST) {
+        log_state = "CREATE_ERROR";
+        return false;
+    }
+
+    for (unsigned int suffix = 0; suffix < 1000; suffix++) {
+        snprintf(
+            log_path,
+            sizeof(log_path),
+            "/sdcard/proctorscan/bringup-%02x%02x%02x-%03u.log",
+            mac[3], mac[4], mac[5], suffix
+        );
+        int descriptor = open(log_path, O_WRONLY | O_CREAT | O_EXCL, 0644);
+        if (descriptor >= 0) {
+            log_file = fdopen(descriptor, "w");
+            if (log_file == NULL) {
+                close(descriptor);
+                log_state = "CREATE_ERROR";
+                return false;
+            }
+            fprintf(
+                log_file,
+                "PROCTORSCAN_DIAGNOSTIC_LOG_V1\n"
+                "device=proctorscan-%02x%02x%02x%02x%02x%02x\n"
+                "board=%s\nfirmware=%s\n",
+                mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
+                BOARD_NAME,
+                FIRMWARE_VERSION
+            );
+            fflush(log_file);
+            fsync(fileno(log_file));
+            log_state = "WRITING";
+            return true;
+        }
+        if (errno != EEXIST) {
+            log_state = "CREATE_ERROR";
+            return false;
+        }
+    }
+
+    log_state = "NO_FREE_FILENAME";
+    return false;
+}
+
+static void append_log_heartbeat(uint32_t sequence)
+{
+    if (log_file == NULL || sequence > 3) {
+        return;
+    }
+    int64_t uptime_ms = esp_timer_get_time() / 1000;
+    fprintf(log_file, "heartbeat=%" PRIu32 ",uptime_ms=%" PRId64 "\n", sequence, uptime_ms);
+    fflush(log_file);
+    fsync(fileno(log_file));
+
+    if (sequence == 3) {
+        fclose(log_file);
+        log_file = NULL;
+
+        FILE *verification_file = fopen(log_path, "r");
+        char contents[512] = {0};
+        if (verification_file == NULL) {
+            log_state = "VERIFY_ERROR";
+        } else {
+            size_t bytes_read = fread(contents, 1, sizeof(contents) - 1, verification_file);
+            fclose(verification_file);
+            contents[bytes_read] = '\0';
+            log_state = strstr(contents, "heartbeat=3") != NULL ? "VERIFIED" : "VERIFY_ERROR";
+        }
+        emit_log_status();
+    }
+}
+
+static void initialize_microsd_logging(const uint8_t mac[6])
 {
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     host.max_freq_khz = SDMMC_FREQ_DEFAULT;
@@ -92,32 +187,25 @@ static void identify_microsd(void)
     slot.d3 = SDMMC_D3_GPIO;
     slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
-    result = sdmmc_host_init();
+    esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = 3,
+        .allocation_unit_size = 16 * 1024,
+    };
+    sdmmc_card_t *card = NULL;
+    result = esp_vfs_fat_sdmmc_mount("/sdcard", &host, &slot, &mount_config, &card);
     if (result != ESP_OK) {
-        storage_state = "INIT_ERROR";
-        emit_storage_status();
-        return;
-    }
-
-    result = sdmmc_host_init_slot(host.slot, &slot);
-    if (result != ESP_OK) {
-        storage_state = "INIT_ERROR";
-        emit_storage_status();
-        return;
-    }
-
-    static sdmmc_card_t card;
-    result = sdmmc_card_init(&host, &card);
-    if (result != ESP_OK) {
-        storage_state = "NOT_DETECTED";
+        storage_state = "MOUNT_ERROR";
         emit_storage_status();
         return;
     }
 
     storage_capacity_bytes =
-        (uint64_t)card.csd.capacity * (uint64_t)card.csd.sector_size;
+        (uint64_t)card->csd.capacity * (uint64_t)card->csd.sector_size;
     storage_state = "DETECTED";
     emit_storage_status();
+    create_unique_log(mac);
+    emit_log_status();
 }
 
 void app_main(void)
@@ -126,16 +214,18 @@ void app_main(void)
     esp_efuse_mac_get_default(mac);
 
     emit_identity(mac);
-    identify_microsd();
+    initialize_microsd_logging(mac);
 
     uint32_t sequence = 0;
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(HEARTBEAT_PERIOD_MS));
         sequence++;
         emit_heartbeat(sequence);
+        append_log_heartbeat(sequence);
         if ((sequence % IDENTITY_PERIOD_HEARTBEATS) == 0) {
             emit_identity(mac);
             emit_storage_status();
+            emit_log_status();
         }
     }
 }

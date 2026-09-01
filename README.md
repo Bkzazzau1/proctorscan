@@ -12,6 +12,11 @@ The first physical test with firmware `0.4.0` reported `NOT_DETECTED` because th
 board-specific SD power controller was not initialized. Firmware `0.4.1` enables
 the documented internal LDO channel 4 before reading card metadata.
 
+Firmware `0.5.0` adds the first controlled local-log test. It mounts without
+formatting, creates a new uniquely named file under `/proctorscan`, writes device
+identity and three heartbeats, and reads the new file back. It uses exclusive file
+creation and therefore never overwrites or deletes an existing file.
+
 No external sensors or camera are connected by this first stage. The AD8318-style
 RF detector, MPU6050, HLK-LD2420 V2.1, and MIPI camera remain electrically
 disconnected until the exact board revisions, pinouts, signal levels, connector

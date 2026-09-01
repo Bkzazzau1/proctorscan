@@ -44,9 +44,11 @@ def print_status(status: DeviceStatus) -> None:
     if status.storage_state is not None:
         if status.storage_state == "DETECTED":
             capacity_gb = status.storage_capacity_bytes / 1_000_000_000
-            print(f"MicroSD: DETECTED  capacity={capacity_gb:.2f} GB  mode=READ ONLY")
+            print(f"MicroSD: DETECTED  capacity={capacity_gb:.2f} GB")
         else:
-            print(f"MicroSD: {status.storage_state}  mode=READ ONLY")
+            print(f"MicroSD: {status.storage_state}")
+    if status.log_state is not None:
+        print(f"Local log: {status.log_state}  file={status.log_path or 'none'}")
     print("-")
 
 
@@ -91,7 +93,7 @@ def simulate(count: int, interval: float) -> int:
         "type": "identity",
         "device_id": "proctorscan-simulator",
         "board": "waveshare-esp32-p4-wifi6-dev-kit",
-        "firmware": "0.4.1-simulated",
+        "firmware": "0.5.0-simulated",
     }
     status.update(parse_line(json.dumps(identity)))
     print("ProctorScan hardware monitor (simulation)")

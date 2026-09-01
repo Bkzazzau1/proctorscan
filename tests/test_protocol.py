@@ -57,14 +57,14 @@ class ProtocolTests(unittest.TestCase):
         status.update(
             parse_line(
                 '{"protocol":1,"type":"storage_status","component":"microsd",'
-                '"mode":"identification_only","state":"DETECTED",'
+                '"mode":"new_file_only","state":"DETECTED",'
                 '"capacity_bytes":32000000000}'
             )
         )
         self.assertEqual(status.storage_state, "DETECTED")
         self.assertEqual(status.storage_capacity_bytes, 32000000000)
 
-    def test_rejects_writable_storage_mode(self):
+    def test_rejects_unrestricted_storage_mode(self):
         with self.assertRaises(ProtocolError):
             DeviceStatus().update(
                 parse_line(
@@ -72,6 +72,16 @@ class ProtocolTests(unittest.TestCase):
                     '"mode":"read_write","state":"DETECTED","capacity_bytes":1}'
                 )
             )
+
+    def test_verified_local_log_status(self):
+        status = DeviceStatus()
+        status.update(
+            parse_line(
+                '{"protocol":1,"type":"log_status","component":"microsd",'
+                '"state":"VERIFIED","path":"/sdcard/proctorscan/bringup-001.log"}'
+            )
+        )
+        self.assertEqual(status.log_state, "VERIFIED")
 
     def test_hardware_readiness_keeps_unverified_peripherals_safe(self):
         peripherals = HARDWARE_ITEMS[2:]

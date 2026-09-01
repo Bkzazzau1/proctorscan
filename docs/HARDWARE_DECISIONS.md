@@ -24,3 +24,9 @@ board-specific power step: the SD host must use internal LDO channel 4. Firmware
 `0.4.1` adds that power-control handle while retaining metadata-only operation.
 The subsequent physical test detected the card successfully at 16.36 GB and
 maintained stable controller heartbeats for more than one minute.
+
+Firmware `0.5.0` then mounted the existing filesystem with formatting disabled,
+created a new file using exclusive creation, wrote device identity and three
+heartbeats, and read the file back successfully. The verified physical-test file
+was `/sdcard/proctorscan/bringup-e3ac0e-001.log`. Existing files were neither
+overwritten nor deleted.
