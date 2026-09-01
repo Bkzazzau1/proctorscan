@@ -31,7 +31,7 @@ def parse_line(line: bytes | str) -> dict[str, Any]:
         raise ProtocolError("message must be a JSON object")
     if message.get("protocol") != PROTOCOL_VERSION:
         raise ProtocolError("unsupported protocol version")
-    if message.get("type") not in {"identity", "heartbeat"}:
+    if message.get("type") not in {"identity", "heartbeat", "storage_status"}:
         raise ProtocolError("unsupported message type")
     return message
 
@@ -44,6 +44,8 @@ class DeviceStatus:
     heartbeat_sequence: int | None = None
     uptime_ms: int | None = None
     last_seen_monotonic: float | None = None
+    storage_state: str | None = None
+    storage_capacity_bytes: int | None = None
 
     def update(self, message: dict[str, Any], now: float | None = None) -> None:
         now = time.monotonic() if now is None else now
@@ -61,6 +63,18 @@ class DeviceStatus:
                 raise ProtocolError("heartbeat uptime_ms must be an integer")
             self.heartbeat_sequence = message["sequence"]
             self.uptime_ms = message["uptime_ms"]
+        else:
+            if message.get("component") != "microsd":
+                raise ProtocolError("unsupported storage component")
+            if message.get("mode") != "identification_only":
+                raise ProtocolError("storage test must be identification only")
+            if message.get("state") not in {"DETECTED", "NOT_DETECTED", "INIT_ERROR"}:
+                raise ProtocolError("invalid storage state")
+            capacity = message.get("capacity_bytes")
+            if not isinstance(capacity, int) or isinstance(capacity, bool) or capacity < 0:
+                raise ProtocolError("storage capacity must be a non-negative integer")
+            self.storage_state = message["state"]
+            self.storage_capacity_bytes = capacity
         self.last_seen_monotonic = now
 
     def connection(self, now: float | None = None, stale_after: float = 5.0) -> str:

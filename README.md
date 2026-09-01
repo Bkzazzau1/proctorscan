@@ -4,6 +4,14 @@ ProctorScan is starting with one deliberately narrow hardware milestone:
 
 > ESP32-P4 → USB serial → local diagnostics monitor → device online
 
+Firmware `0.4.0` also performs an identification-only check of a card inserted in
+the board's built-in microSD/TF slot. It reads card metadata but does not mount a
+filesystem, format the card, create files, or modify existing files.
+
+The first physical test completed with firmware `0.4.0`, but the inserted card
+reported `NOT_DETECTED`. The controller remained online with stable heartbeats.
+Card type, orientation, and full insertion must be inspected before another test.
+
 No external sensors or camera are connected by this first stage. The AD8318-style
 RF detector, MPU6050, HLK-LD2420 V2.1, and MIPI camera remain electrically
 disconnected until the exact board revisions, pinouts, signal levels, connector

@@ -52,8 +52,29 @@ class ProtocolTests(unittest.TestCase):
                 '"x_g":0,"y_g":0,"z_g":1}'
             )
 
+    def test_microsd_identification_status(self):
+        status = DeviceStatus()
+        status.update(
+            parse_line(
+                '{"protocol":1,"type":"storage_status","component":"microsd",'
+                '"mode":"identification_only","state":"DETECTED",'
+                '"capacity_bytes":32000000000}'
+            )
+        )
+        self.assertEqual(status.storage_state, "DETECTED")
+        self.assertEqual(status.storage_capacity_bytes, 32000000000)
+
+    def test_rejects_writable_storage_mode(self):
+        with self.assertRaises(ProtocolError):
+            DeviceStatus().update(
+                parse_line(
+                    '{"protocol":1,"type":"storage_status","component":"microsd",'
+                    '"mode":"read_write","state":"DETECTED","capacity_bytes":1}'
+                )
+            )
+
     def test_hardware_readiness_keeps_unverified_peripherals_safe(self):
-        peripherals = HARDWARE_ITEMS[1:]
+        peripherals = HARDWARE_ITEMS[2:]
         self.assertTrue(peripherals)
         self.assertTrue(all("DISCONNECTED" in item.state for item in peripherals))
         self.assertIn("No unverified peripheral is approved for powered use", hardware_status_text())

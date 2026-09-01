@@ -14,6 +14,7 @@ class HardwareItem:
 
 HARDWARE_ITEMS = (
     HardwareItem("ESP32-P4 controller", "VERIFIED / USB ONLY", "Keep diagnostics operational"),
+    HardwareItem("MicroSD storage", "POWERED PROBE / NOT DETECTED", "Inspect card type, orientation, and full insertion"),
     HardwareItem("MPU6050 motion/tamper sensor", "DISCONNECTED / UNVERIFIED", "Confirm exact breakout, pinout, and voltage requirements"),
     HardwareItem("AD8318-style RF detector", "DISCONNECTED / UNVERIFIED", "Confirm exact module and output range"),
     HardwareItem("HLK-LD2420 V2.1 radar", "DISCONNECTED / UNVERIFIED", "Confirm manufacturer pinout and levels"),
