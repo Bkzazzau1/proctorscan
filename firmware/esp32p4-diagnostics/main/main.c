@@ -8,8 +8,9 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "sdmmc_cmd.h"
+#include "sd_pwr_ctrl_by_on_chip_ldo.h"
 #define PROTOCOL_VERSION 1
-#define FIRMWARE_VERSION "0.4.0"
+#define FIRMWARE_VERSION "0.4.1"
 #define BOARD_NAME "waveshare-esp32-p4-wifi6-dev-kit"
 #define HEARTBEAT_PERIOD_MS 2000
 #define IDENTITY_PERIOD_HEARTBEATS 15
@@ -19,6 +20,7 @@
 #define SDMMC_D1_GPIO 40
 #define SDMMC_D2_GPIO 41
 #define SDMMC_D3_GPIO 42
+#define SDMMC_LDO_CHANNEL 4
 
 static const char *storage_state = "INIT_ERROR";
 static uint64_t storage_capacity_bytes = 0;
@@ -68,6 +70,18 @@ static void identify_microsd(void)
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
     host.max_freq_khz = SDMMC_FREQ_DEFAULT;
 
+    sd_pwr_ctrl_ldo_config_t ldo_config = {
+        .ldo_chan_id = SDMMC_LDO_CHANNEL,
+    };
+    sd_pwr_ctrl_handle_t power_handle = NULL;
+    esp_err_t result = sd_pwr_ctrl_new_on_chip_ldo(&ldo_config, &power_handle);
+    if (result != ESP_OK) {
+        storage_state = "INIT_ERROR";
+        emit_storage_status();
+        return;
+    }
+    host.pwr_ctrl_handle = power_handle;
+
     sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
     slot.width = 4;
     slot.clk = SDMMC_CLK_GPIO;
@@ -78,7 +92,7 @@ static void identify_microsd(void)
     slot.d3 = SDMMC_D3_GPIO;
     slot.flags |= SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
 
-    esp_err_t result = sdmmc_host_init();
+    result = sdmmc_host_init();
     if (result != ESP_OK) {
         storage_state = "INIT_ERROR";
         emit_storage_status();

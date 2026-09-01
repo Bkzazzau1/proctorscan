@@ -91,7 +91,7 @@ def simulate(count: int, interval: float) -> int:
         "type": "identity",
         "device_id": "proctorscan-simulator",
         "board": "waveshare-esp32-p4-wifi6-dev-kit",
-        "firmware": "0.4.0-simulated",
+        "firmware": "0.4.1-simulated",
     }
     status.update(parse_line(json.dumps(identity)))
     print("ProctorScan hardware monitor (simulation)")

@@ -19,5 +19,8 @@ are verified from authoritative documentation.
 Firmware `0.4.0` performed a metadata-only SDMMC initialization using the official
 Waveshare ESP32-P4 pin mapping. It did not mount or modify the filesystem. The first
 physical test returned `NOT_DETECTED` while USB identity and heartbeat diagnostics
-remained healthy. Inspect the card type, orientation, and full insertion before
-repeating the test.
+remained healthy. Review of Waveshare's official example identified the missing
+board-specific power step: the SD host must use internal LDO channel 4. Firmware
+`0.4.1` adds that power-control handle while retaining metadata-only operation.
+The subsequent physical test detected the card successfully at 16.36 GB and
+maintained stable controller heartbeats for more than one minute.
