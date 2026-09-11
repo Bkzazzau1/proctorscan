@@ -17,6 +17,13 @@ formatting, creates a new uniquely named file under `/proctorscan`, writes devic
 identity and three heartbeats, and reads the new file back. It uses exclusive file
 creation and therefore never overwrites or deletes an existing file.
 
+Firmware `0.6.0` adds a passive enclosure/tamper microswitch diagnostic on GPIO5
+(physical pin 13) with GND on physical pin 14. The local monitor reports the raw
+contact as `OPEN` or `CLOSED`; no 3.3 V or 5 V connection is used.
+
+Firmware `0.7.0` adds a staged HLK-LD2420 V2.1 presence test using its `OT2`
+3.3 V output on GPIO4 (physical pin 16). Radar UART remains disconnected.
+
 No external sensors or camera are connected by this first stage. The AD8318-style
 RF detector, MPU6050, HLK-LD2420 V2.1, and MIPI camera remain electrically
 disconnected until the exact board revisions, pinouts, signal levels, connector

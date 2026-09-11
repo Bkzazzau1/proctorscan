@@ -10,13 +10,14 @@
 #include "esp_mac.h"
 #include "esp_timer.h"
 #include "esp_vfs_fat.h"
+#include "driver/gpio.h"
 #include "driver/sdmmc_host.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "sdmmc_cmd.h"
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 #define PROTOCOL_VERSION 1
-#define FIRMWARE_VERSION "0.5.0"
+#define FIRMWARE_VERSION "0.7.0"
 #define BOARD_NAME "waveshare-esp32-p4-wifi6-dev-kit"
 #define HEARTBEAT_PERIOD_MS 2000
 #define IDENTITY_PERIOD_HEARTBEATS 15
@@ -27,12 +28,75 @@
 #define SDMMC_D2_GPIO 41
 #define SDMMC_D3_GPIO 42
 #define SDMMC_LDO_CHANNEL 4
+#define TAMPER_SWITCH_GPIO GPIO_NUM_5
+#define RADAR_PRESENCE_GPIO GPIO_NUM_4
 
 static const char *storage_state = "INIT_ERROR";
 static uint64_t storage_capacity_bytes = 0;
 static const char *log_state = "NOT_STARTED";
 static char log_path[80] = "";
 static FILE *log_file = NULL;
+
+static void initialize_tamper_switch(void)
+{
+    gpio_config_t config = {
+        .pin_bit_mask = 1ULL << TAMPER_SWITCH_GPIO,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&config);
+}
+
+static int read_tamper_switch_level(void)
+{
+    return gpio_get_level(TAMPER_SWITCH_GPIO);
+}
+
+static void emit_tamper_switch(int level)
+{
+    printf(
+        "{\"protocol\":%d,\"type\":\"tamper_switch\","
+        "\"gpio\":%d,\"physical_pin\":13,\"level\":%d,"
+        "\"contact\":\"%s\"}\n",
+        PROTOCOL_VERSION,
+        TAMPER_SWITCH_GPIO,
+        level,
+        level == 0 ? "CLOSED" : "OPEN"
+    );
+    fflush(stdout);
+}
+
+static void initialize_radar_presence(void)
+{
+    gpio_config_t config = {
+        .pin_bit_mask = 1ULL << RADAR_PRESENCE_GPIO,
+        .mode = GPIO_MODE_INPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_ENABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&config);
+}
+
+static int read_radar_presence_level(void)
+{
+    return gpio_get_level(RADAR_PRESENCE_GPIO);
+}
+
+static void emit_radar_presence(int level)
+{
+    printf(
+        "{\"protocol\":%d,\"type\":\"radar_presence\","
+        "\"component\":\"hlk-ld2420-v2.1\",\"signal\":\"OT2\","
+        "\"gpio\":%d,\"physical_pin\":16,\"level\":%d,"
+        "\"presence\":%s}\n",
+        PROTOCOL_VERSION, RADAR_PRESENCE_GPIO, level,
+        level == 1 ? "true" : "false"
+    );
+    fflush(stdout);
+}
 
 static void emit_identity(const uint8_t mac[6])
 {
@@ -214,6 +278,12 @@ void app_main(void)
     esp_efuse_mac_get_default(mac);
 
     emit_identity(mac);
+    initialize_tamper_switch();
+    int switch_level = read_tamper_switch_level();
+    emit_tamper_switch(switch_level);
+    initialize_radar_presence();
+    int radar_level = read_radar_presence_level();
+    emit_radar_presence(radar_level);
     initialize_microsd_logging(mac);
 
     uint32_t sequence = 0;
@@ -221,11 +291,31 @@ void app_main(void)
         vTaskDelay(pdMS_TO_TICKS(HEARTBEAT_PERIOD_MS));
         sequence++;
         emit_heartbeat(sequence);
+        int current_switch_level = read_tamper_switch_level();
+        if (current_switch_level != switch_level) {
+            vTaskDelay(pdMS_TO_TICKS(25));
+            current_switch_level = read_tamper_switch_level();
+            if (current_switch_level != switch_level) {
+                switch_level = current_switch_level;
+                emit_tamper_switch(switch_level);
+            }
+        }
+        int current_radar_level = read_radar_presence_level();
+        if (current_radar_level != radar_level) {
+            vTaskDelay(pdMS_TO_TICKS(25));
+            current_radar_level = read_radar_presence_level();
+            if (current_radar_level != radar_level) {
+                radar_level = current_radar_level;
+                emit_radar_presence(radar_level);
+            }
+        }
         append_log_heartbeat(sequence);
         if ((sequence % IDENTITY_PERIOD_HEARTBEATS) == 0) {
             emit_identity(mac);
             emit_storage_status();
             emit_log_status();
+            emit_tamper_switch(switch_level);
+            emit_radar_presence(radar_level);
         }
     }
 }

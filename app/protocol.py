@@ -31,7 +31,10 @@ def parse_line(line: bytes | str) -> dict[str, Any]:
         raise ProtocolError("message must be a JSON object")
     if message.get("protocol") != PROTOCOL_VERSION:
         raise ProtocolError("unsupported protocol version")
-    if message.get("type") not in {"identity", "heartbeat", "storage_status", "log_status"}:
+    if message.get("type") not in {
+        "identity", "heartbeat", "storage_status", "log_status", "tamper_switch",
+        "radar_presence",
+    }:
         raise ProtocolError("unsupported message type")
     return message
 
@@ -48,6 +51,10 @@ class DeviceStatus:
     storage_capacity_bytes: int | None = None
     log_state: str | None = None
     log_path: str | None = None
+    tamper_contact: str | None = None
+    tamper_level: int | None = None
+    radar_present: bool | None = None
+    radar_level: int | None = None
 
     def update(self, message: dict[str, Any], now: float | None = None) -> None:
         now = time.monotonic() if now is None else now
@@ -77,7 +84,7 @@ class DeviceStatus:
                 raise ProtocolError("storage capacity must be a non-negative integer")
             self.storage_state = message["state"]
             self.storage_capacity_bytes = capacity
-        else:
+        elif message["type"] == "log_status":
             if message.get("component") != "microsd":
                 raise ProtocolError("unsupported log component")
             allowed_states = {
@@ -90,6 +97,28 @@ class DeviceStatus:
                 raise ProtocolError("log path must be a string")
             self.log_state = message["state"]
             self.log_path = message["path"]
+        elif message["type"] == "tamper_switch":
+            if message.get("gpio") != 5 or message.get("physical_pin") != 13:
+                raise ProtocolError("unexpected tamper switch pin mapping")
+            if message.get("level") not in {0, 1}:
+                raise ProtocolError("tamper switch level must be 0 or 1")
+            if message.get("contact") not in {"OPEN", "CLOSED"}:
+                raise ProtocolError("invalid tamper switch contact state")
+            self.tamper_level = message["level"]
+            self.tamper_contact = message["contact"]
+        else:
+            if message.get("component") != "hlk-ld2420-v2.1" or message.get("signal") != "OT2":
+                raise ProtocolError("unexpected radar component or signal")
+            if message.get("gpio") != 4 or message.get("physical_pin") != 16:
+                raise ProtocolError("unexpected radar presence pin mapping")
+            if message.get("level") not in {0, 1}:
+                raise ProtocolError("radar level must be 0 or 1")
+            if not isinstance(message.get("presence"), bool):
+                raise ProtocolError("radar presence must be boolean")
+            if message["presence"] != (message["level"] == 1):
+                raise ProtocolError("radar presence does not match level")
+            self.radar_level = message["level"]
+            self.radar_present = message["presence"]
         self.last_seen_monotonic = now
 
     def connection(self, now: float | None = None, stale_after: float = 5.0) -> str:

@@ -83,6 +83,44 @@ class ProtocolTests(unittest.TestCase):
         )
         self.assertEqual(status.log_state, "VERIFIED")
 
+    def test_tamper_switch_status(self):
+        status = DeviceStatus()
+        status.update(
+            parse_line(
+                '{"protocol":1,"type":"tamper_switch","gpio":5,'
+                '"physical_pin":13,"level":0,"contact":"CLOSED"}'
+            )
+        )
+        self.assertEqual(status.tamper_contact, "CLOSED")
+        self.assertEqual(status.tamper_level, 0)
+
+    def test_radar_presence_status(self):
+        status = DeviceStatus()
+        status.update(parse_line(
+            '{"protocol":1,"type":"radar_presence",'
+            '"component":"hlk-ld2420-v2.1","signal":"OT2",'
+            '"gpio":4,"physical_pin":16,"level":1,"presence":true}'
+        ))
+        self.assertTrue(status.radar_present)
+        self.assertEqual(status.radar_level, 1)
+
+    def test_rejects_wrong_radar_pin(self):
+        with self.assertRaises(ProtocolError):
+            DeviceStatus().update(parse_line(
+                '{"protocol":1,"type":"radar_presence",'
+                '"component":"hlk-ld2420-v2.1","signal":"OT2",'
+                '"gpio":5,"physical_pin":16,"level":0,"presence":false}'
+            ))
+
+    def test_rejects_wrong_tamper_pin(self):
+        with self.assertRaises(ProtocolError):
+            DeviceStatus().update(
+                parse_line(
+                    '{"protocol":1,"type":"tamper_switch","gpio":6,'
+                    '"physical_pin":13,"level":1,"contact":"OPEN"}'
+                )
+            )
+
     def test_hardware_readiness_keeps_unverified_peripherals_safe(self):
         peripherals = HARDWARE_ITEMS[2:]
         self.assertTrue(peripherals)

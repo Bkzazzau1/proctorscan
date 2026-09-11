@@ -49,6 +49,16 @@ def print_status(status: DeviceStatus) -> None:
             print(f"MicroSD: {status.storage_state}")
     if status.log_state is not None:
         print(f"Local log: {status.log_state}  file={status.log_path or 'none'}")
+    if status.tamper_contact is not None:
+        print(
+            f"Tamper switch: {status.tamper_contact}  "
+            f"GPIO5={status.tamper_level}  physical-pin=13"
+        )
+    if status.radar_present is not None:
+        print(
+            f"LD2420 presence: {'DETECTED' if status.radar_present else 'CLEAR'}  "
+            f"OT2={status.radar_level}  GPIO4  physical-pin=16"
+        )
     print("-")
 
 
@@ -93,7 +103,7 @@ def simulate(count: int, interval: float) -> int:
         "type": "identity",
         "device_id": "proctorscan-simulator",
         "board": "waveshare-esp32-p4-wifi6-dev-kit",
-        "firmware": "0.5.0-simulated",
+        "firmware": "0.7.0-simulated",
     }
     status.update(parse_line(json.dumps(identity)))
     print("ProctorScan hardware monitor (simulation)")
@@ -109,6 +119,22 @@ def simulate(count: int, interval: float) -> int:
             "uptime_ms": sequence * 2000,
         }
         status.update(parse_line(json.dumps(heartbeat)))
+        switch = {
+            "protocol": 1,
+            "type": "tamper_switch",
+            "gpio": 5,
+            "physical_pin": 13,
+            "level": sequence % 2,
+            "contact": "OPEN" if sequence % 2 else "CLOSED",
+        }
+        status.update(parse_line(json.dumps(switch)))
+        radar = {
+            "protocol": 1, "type": "radar_presence",
+            "component": "hlk-ld2420-v2.1", "signal": "OT2",
+            "gpio": 4, "physical_pin": 16,
+            "level": sequence % 2, "presence": bool(sequence % 2),
+        }
+        status.update(parse_line(json.dumps(radar)))
         print_status(status)
     return 0
 
